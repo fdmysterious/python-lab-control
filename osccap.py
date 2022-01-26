@@ -7,9 +7,11 @@ from   pathlib import Path
 # Path to the directory containg the script file
 root_path = (Path(__file__) / "..").resolve()
 
-# Add current script directory to windows path (on windows :p) to find third party DLLs
 if sys.platform == "win32":
-    os.environ["PATH"] = str(root_path) + os.pathsep + os.environ["PATH"]
+    import libusb
+## Add current script directory to windows path (on windows :p) to find third party DLLs
+#if sys.platform == "win32":
+#    os.environ["PATH"] = str(root_path) + os.pathsep + os.environ["PATH"]
 
 from pathlib import Path
 from instr.tds2024b import TDS2024B_Interface
