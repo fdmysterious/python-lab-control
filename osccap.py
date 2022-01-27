@@ -1,3 +1,12 @@
+"""
+┌────────────────────────────────────────────────────────────────────┐
+│ Quick and dirty script to take captures from TDS2024B oscilloscope │
+└────────────────────────────────────────────────────────────────────┘
+
+ Florian Dupeyron
+ January 2022
+"""
+
 import argparse
 import os
 import sys
