@@ -12,12 +12,16 @@
 import usbtmc
 import logging
 import numpy as np
+import re
+import time
 
 from PIL         import Image
 from io          import BytesIO
 
 from enum        import Enum
 from dataclasses import dataclass, field
+
+from threading   import Event
 
 # ┌────────────────────────────────────────┐
 # │ Measurement subsystem                  │
@@ -28,6 +32,23 @@ class TDS2024B_Measurement_Source(Enum):
     CH3       = "CH3"
     CH4       = "CH4"
     MATH      = "MATH"
+
+
+    @classmethod
+    def channel(cls, i):
+        """
+        Returns the corresponding source according to
+        the index i
+        """
+
+        __chan_idx = {
+            0: cls.CH1,
+            1: cls.CH2,
+            2: cls.CH3,
+            3: cls.CH4,
+        }
+
+        return __chan_idx[i]
 
 class TDS2024B_Measurement_Type(Enum):
     Disable   = "NONE"
@@ -89,10 +110,10 @@ class TDS2024B_Measurement:
         self.log.debug("Write settings")
 
         # Write source
-        self.dev.write(f"MEASU:{self.id}:SOURCE {self.source!s}")
+        self.dev.write(f"MEASU:{self.id}:SOURCE {self.source.value}")
         
         # Write type
-        self.dev.write(f"MEASU:{self.id}:TYPE {self.type!s}")
+        self.dev.write(f"MEASU:{self.id}:TYPE {self.type.value}")
 
     # ┌────────────────────────────────────────┐
     # │ Properties                             │
@@ -125,7 +146,7 @@ class TDS2024B_Channel_Parameters:
     chan: int                                  # Channel number (0-3)
     
     bw_filter: bool                     = None # Enable bandwidth filter? (20MHz or 200MHz)
-    coupling: TDS2024B_Channel_Coupling = None # Channel coupling mode
+    coupling: TDS2024B_Channel_Coupling = None # Channel coupling mode
 
     invert: bool                        = None # Enable inversion?
     position: float                     = None # Vertical position
@@ -153,12 +174,12 @@ class TDS2024B_Channel_Parameters:
     def settings_write(self):
         self.log.debug("Write settings")
 
-        self.dev.write(f"CH{self.chan}:BANDWIDTH %s" % ("ON" if self.bw_filter else "OFF"))
-        self.dev.write(f"CH{self.chan}:COUPLING {self.coupling.value}")
-        self.dev.write(f"CH{self.chan}:INVERT %s" % ("ON" if self.invert else "OFF"))
-        self.dev.write(f"CH{self.chan}:POS {self.position:G}")
-        self.dev.write(f"CH{self.chan}:PROBE {self.attenuation:G}")
-        self.dev.write(f"CH{self.chan}:SCALE {self.scale:G}")
+        if self.bw_filter   is not None: self.dev.write(f"CH{self.chan}:BANDWIDTH %s" % ("ON" if self.bw_filter else "OFF"))
+        if self.coupling    is not None: self.dev.write(f"CH{self.chan}:COUPLING {self.coupling.value}")
+        if self.invert      is not None: self.dev.write(f"CH{self.chan}:INVERT %s" % ("ON" if self.invert else "OFF"))
+        if self.position    is not None: self.dev.write(f"CH{self.chan}:POS {self.position:E}")
+        if self.attenuation is not None: self.dev.write(f"CH{self.chan}:PROBE {self.attenuation:E}")
+        if self.scale       is not None: self.dev.write(f"CH{self.chan}:SCALE {self.scale:E}")
 
     # ──────────── Enable/disable ──────────── #
     def enable(self):
@@ -195,8 +216,8 @@ class TDS2024B_Horizontal_Parameters:
     def settings_write(self):
         self.log.debug("Write settings")
 
-        self.dev.write(f"HOR:{self.id}:POS {self.pos:G}")
-        self.dev.write(f"HOR:{self.id}:SCALE {self.scale:G}")
+        if self.pos   is not None: self.dev.write(f"HOR:{self.id}:POS {self.pos:E}"    )
+        if self.scale is not None: self.dev.write(f"HOR:{self.id}:SCALE {self.scale:E}")
     
 # ┌────────────────────────────────────────┐
 # │ Trigger parameters                     │
@@ -304,14 +325,14 @@ class TDS2024B_Trigger_Parameters:
         self.log.debug("Write settings")
 
         # Main settings
-        self.dev.write(f"TRIG:{self.id}:TYPE {self.type.value}")
-        self.dev.write(f"TRIG:{self.id}:MODE {self.mode.value}")
-        self.dev.write(f"TRIG:{self.id}:LEVEL {self.level:G}")
+        if self.type  is not None: self.dev.write(f"TRIG:{self.id}:TYPE {self.type.value}")
+        if self.mode  is not None: self.dev.write(f"TRIG:{self.id}:MODE {self.mode.value}")
+        if self.level is not None: self.dev.write(f"TRIG:{self.id}:LEVEL {self.level:G}")
         
         # Edge settings
-        self.dev.write(f"TRIG:{self.id}:EDGE:COUPLING {self.edge_coupling.value}")
-        self.dev.write(f"TRIG:{self.id}:EDGE:SLOPE {self.edge_slope.value}")
-        self.dev.write(f"TRIG:{self.id}:EDGE:SOURCE {self.edge_source.value}")
+        if self.edge_coupling is not None: self.dev.write(f"TRIG:{self.id}:EDGE:COUPLING {self.edge_coupling.value}")
+        if self.edge_slope    is not None: self.dev.write(f"TRIG:{self.id}:EDGE:SLOPE {self.edge_slope.value}")
+        if self.edge_source   is not None: self.dev.write(f"TRIG:{self.id}:EDGE:SOURCE {self.edge_source.value}")
 
 # ┌────────────────────────────────────────┐
 # │ Interface class                        │
@@ -320,6 +341,8 @@ class TDS2024B_Trigger_Parameters:
 class TDS2024B_Interface:
     def __init__(self, vendor_id=0x699, product_id=0x036A):
         self.dev = usbtmc.Instrument(vendor_id, product_id)
+        self.synchronized = Event()
+        self.synchronized.clear()
 
         # Change the default timeout
         self.dev.timeout = 10 
@@ -329,7 +352,7 @@ class TDS2024B_Interface:
         # Trigger settings
         self.trigger          = TDS2024B_Trigger_Parameters(self.dev, "MAIN")
 
-        # Horizontal handles
+        # Horizontal handles
         self.horizontal_main  = TDS2024B_Horizontal_Parameters(self.dev, "MAIN" )
         self.horizontal_delay = TDS2024B_Horizontal_Parameters(self.dev, "DELAY")
 
@@ -344,13 +367,9 @@ class TDS2024B_Interface:
         # faster to run
         self.mes_imm = TDS2024B_Measurement(self.dev, "IMM")
 
-
-    # ┌────────────────────────────────────────┐
-    # │ Status sync.                           │
-    # └────────────────────────────────────────┘
-    def status_sync(self):
+    def state_sync(self):
         # Init resources status
-        self.log.info("Synchronize status")
+        self.log.info("Synchronize resource status")
 
         self.trigger.settings_read()
         self.horizontal_main.settings_read()
@@ -360,6 +379,7 @@ class TDS2024B_Interface:
         for mes in self.mes: mes.settings_read()
         self.mes_imm.settings_read()
 
+        self.synchronized.set()
 
     # ┌────────────────────────────────────────┐
     # │ System commands                        │
@@ -367,7 +387,6 @@ class TDS2024B_Interface:
     
     def identity(self):
         return self.dev.ask("*IDN?")
-
 
     # ┌────────────────────────────────────────┐
     # │ Hardcopy                               │
@@ -383,7 +402,7 @@ class TDS2024B_Interface:
         # Sets the port to USB and the format to BMP
         self.dev.write("HARDC:PORT USB;FORMAT BMP")
 
-        # Reads the hardcopy image
+        # Reads the hardcopy image
         self.dev.write("HARDC START")
         img_bytes = self.dev.read_raw()
         img_handle = BytesIO(img_bytes)

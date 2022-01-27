@@ -9,9 +9,11 @@ root_path = (Path(__file__) / "..").resolve()
 
 if sys.platform == "win32":
     import libusb
-## Add current script directory to windows path (on windows :p) to find third party DLLs
-#if sys.platform == "win32":
-#    os.environ["PATH"] = str(root_path) + os.pathsep + os.environ["PATH"]
+
+    # Uncomment this line if you get a "No backend availble" error
+    # This line adds the found DLL_PATH to the PATH env. variable, so that
+    # the libusb dll can be found by the current executable.
+    #os.environ["PATH"] = str((Path(libusb._platform.DLL_PATH) / "..").resolve()) + os.pathsep + os.environ["PATH"]
 
 from pathlib import Path
 from instr.tds2024b import TDS2024B_Interface
