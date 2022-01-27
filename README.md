@@ -35,3 +35,16 @@ pip3 install -r requirements.txt
    ```
    python3.exe osccap.py IMG_NAME.png
    ```
+
+5. In case you have a `No backend available` error, there is a dirty hotfix you can
+   uncomment :
+
+   ```python
+   if sys.platform == "win32":
+       import libusb
+       
+       # Uncomment this line if you get a "No backend availble" error
+       # This line adds the found DLL_PATH to the PATH env. variable, so that
+       # the libusb dll can be found by the current executable.
+       os.environ["PATH"] = str((Path(libusb._platform.DLL_PATH) / "..").resolve()) + os.pathsep + os.environ["PATH"]
+   ```
