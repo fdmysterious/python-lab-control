@@ -340,6 +340,81 @@ class TDS2024B_Trigger_Parameters:
 
 class TDS2024B_Interface:
     def __init__(self, vendor_id=0x699, product_id=0x036A):
+        """
+        Main interface to the TDS2024B oscilloscope using USB TMC bus
+
+        Some various notes :
+
+        - the synchronized event can be used to ensure all the settings has been read from the scope
+        at least one time. For example:
+
+        .. code:: python
+            
+            if not scope.synchronized.is_set():
+                scope.state_sync() # Blocking function, no need to wait for the flag to be set
+
+
+        - The recommended usage to use the scope is to read the settings you want to modify, set
+        them, and then send them to the scope. Here is a full example:
+
+        .. code:: python
+
+                osc = TDS2024B_Interface()
+
+                # Set channel parameters
+                def chan_conf(i):
+                    osc.ch[i].bw_filter = False                        # 200 MHz bandwidth
+                    osc.ch[i].scale     = 1.0                          # V/div
+                    osc.ch[i].coupling  = TDS2024B_Channel_Coupling.DC # DC coupling
+                    osc.ch[i].position  = 0                            # Center channel on scope
+
+                    osc.ch[i].settings_write()
+                    osc.ch[i].enable()
+
+                def chan_hide(i):
+                    osc.ch[i].disable()
+
+                chan_conf(0)
+                chan_conf(1)
+                chan_conf(2)
+                chan_hide(3)
+
+                # Set time trigger parameters
+                osc.trigger.type          = TDS2024B_Trigger_Type.Edge
+                osc.trigger.mode          = TDS2024B_Trigger_Mode.Auto
+                osc.trigger.level         = 2.0 # V
+                osc.trigger.edge_coupling = TDS2024B_Trigger_Edge_Coupling.DC
+                osc.trigger.edge_slope    = TDS2024B_Trigger_Edge_Slope.Fall
+                osc.trigger.source        = TDS2024B_Trigger_Edge_Source.CH1
+
+                osc.trigger.settings_write()
+
+                # Set horizontal time settings
+                osc.horizontal_main.pos   = 0.0    # Center
+                osc.horizontal_main.scale = 250e-6 # s
+
+                osc.horizontal_main.settings_write()
+                
+                # Set immediate measurement settings
+                osc.mes_imm.source         = TDS2024B_Measurement_Source.CH1
+                osc.mes_imm.type           = TDS2024B_Measurement_Type.Period
+
+                osc.mes_imm.settings_write()
+                
+                # Set measurement settings
+                osc.mes[0].source         = TDS2024B_Measurement_Source.CH1
+                osc.mes[0].type           = TDS2024B_Measurement_Type.NWidth # Negative pulse width
+                osc.mes[1].source         = TDS2024B_Measurement_Source.CH2
+                osc.mes[1].type           = TDS2024B_Measurement_Type.NWidth # Negative pulse width
+                osc.mes[2].source         = TDS2024B_Measurement_Source.CH3
+                osc.mes[2].type           = TDS2024B_Measurement_Type.NWidth # Negative pulse width
+
+                osc.mes[0].settings_write()
+                osc.mes[1].settings_write()
+                osc.mes[2].settings_write()
+
+        """
+
         self.dev = usbtmc.Instrument(vendor_id, product_id)
         self.synchronized = Event()
         self.synchronized.clear()
