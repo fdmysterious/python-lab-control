@@ -4,6 +4,46 @@ Dumb classes for test instrumentation access
 Florian Dupeyron
 October 2021-January 2022
 
+Making this work on linux
+-------------------------
+
+1. Copy the udev rules :
+
+```bash
+$ sudo cp udev/*.rules /etc/udev/rules.d
+$ sudo udevadm control --reload
+$ sudo udevadm trigger
+```
+
+3. For usbtmc devices, create the `usbtmc` group and add your user to it:
+
+```
+sudo groupadd usbtmc
+sudo usermod -aG usbtmc $USER
+```
+
+4. Restart your session
+
+5. Initialize a python virtual environment inside the directory (you may need to install a distribution package):
+
+```bash
+$ python3 -m venv .env
+$ source .env/bin/activate
+```
+
+6. Install the required packages
+
+```bash
+$ pip install -r requirements.txt
+```
+
+7. You should be able to launch scripts using the python command line. After getting into the virtual environment (`source .env/bin/activate`),
+   you can go:
+
+```bash
+(.env) $ python3 osccap.py test_image.png
+```
+
 Making this work on windows
 ---------------------------
 

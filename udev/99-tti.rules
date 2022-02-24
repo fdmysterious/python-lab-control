@@ -1,0 +1,2 @@
+# TTI QLP355p
+SUBSYSTEM=="tty", ATTRS{idVendor}=="103e", ATTRS{idProduct}=="03e8", SYMLINK+= "lab/QL335P"

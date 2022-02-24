@@ -1,0 +1,5 @@
+# Tektronix AFG3022B
+SUBSYSTEMS=="usb", ACTION=="add", ATTRS{idVendor}=="0699", ATTRS{idProduct}=="0347", GROUP="usbtmc", MODE="0660"
+
+# Tektronix TDS2024B
+SUBSYSTEMS=="usb", ACTION=="add", ATTRS{idVendor}=="0699", ATTRS{idProduct}=="036a", GROUP="usbtmc", MODE="0660"
