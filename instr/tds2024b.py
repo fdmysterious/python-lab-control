@@ -196,6 +196,7 @@ class TDS2024B_Channel_Parameters:
         self.position    = float(self.dev.ask(f"CH{self.chan}:POS?"))
         self.attenuation = float(self.dev.ask(f"CH{self.chan}:PROBE?"))
         self.scale       = float(self.dev.ask(f"CH{self.chan}:SCALE?"))
+        self.on          = bool(int(self.dev.ask(f"SELECT:CH{self.chan}?")))
 
 
     def settings_write(self):
@@ -207,6 +208,7 @@ class TDS2024B_Channel_Parameters:
         if self.position    is not None: self.dev.write(f"CH{self.chan}:POS {self.position:E}")
         if self.attenuation is not None: self.dev.write(f"CH{self.chan}:PROBE {self.attenuation:E}")
         if self.scale       is not None: self.dev.write(f"CH{self.chan}:SCALE {self.scale:E}")
+        if self.on          is not None: self.dev.write(f"SELECT:CH{self.chan} {int(self.on)}")
 
     # ┌────────────────────────────────────────┐
     # │ Enable/Disable                         │
