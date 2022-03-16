@@ -136,7 +136,7 @@ if __name__ == "__main__":
 	osc.trigger.level         = 2.0 # V
 	osc.trigger.edge_coupling = TDS2024B_Trigger_Edge_Coupling.DC
 	osc.trigger.edge_slope    = TDS2024B_Trigger_Edge_Slope.Fall
-	osc.trigger.source        = TDS2024B_Trigger_Edge_Source.CH1
+	osc.trigger.edge_source   = TDS2024B_Trigger_Edge_Source.CH1
 
 	osc.trigger.settings_write()
 
