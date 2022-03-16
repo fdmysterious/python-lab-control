@@ -9,6 +9,9 @@
  December 2021
 """
 
+# Enums also inherits from 'str' class: see https://stackoverflow.com/questions/24481852/serialising-an-enum-member-to-json
+# This allows the objects to be serializable
+
 import usbtmc
 import logging
 import numpy as np
@@ -19,14 +22,14 @@ from PIL         import Image
 from io          import BytesIO
 
 from enum        import Enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar, asdict
 
 from threading   import Event
 
 # ┌────────────────────────────────────────┐
 # │ Measurement subsystem                  │
 # └────────────────────────────────────────┘
-class TDS2024B_Measurement_Source(Enum):
+class TDS2024B_Measurement_Source(str, Enum):
     CH1       = "CH1"
     CH2       = "CH2"
     CH3       = "CH3"
@@ -50,7 +53,7 @@ class TDS2024B_Measurement_Source(Enum):
 
         return __chan_idx[i]
 
-class TDS2024B_Measurement_Type(Enum):
+class TDS2024B_Measurement_Type(str, Enum):
     Disable   = "NONE"
     Cycle_RMS = "CRMS"
 
@@ -67,26 +70,32 @@ class TDS2024B_Measurement_Type(Enum):
 
     Peak2Peak = "PK2PK"
 
-class TDS2024B_Measurement_Unit(Enum):
+class TDS2024B_Measurement_Unit(str, Enum):
     Volts     = "V"
     Seconds   = "s"
     Hertz     = "Hz"
 
+@dataclass
 class TDS2024B_Measurement:
-    def __init__(
-        self,
-        dev,
-        id_,
+    dev:  InitVar[usbtmc.Instrument]           # USBTMC handle
+    id:   InitVar[str]                         # Measurement id: not represented in settings
 
-        source  = None,
-        type_   = None
-    ):
-        self.log  = logging.getLogger(f"TDS2024B Measure {id_}")
-        self.dev  = dev
+    source: TDS2024B_Measurement_Source = None
+    type:   TDS2024B_Measurement_Type   = None
 
-        self.id     = id_
-        self.source = source
-        self.type   = type_
+    def __post_init__(self, dev, id):
+        self.dev = dev
+        self.id  = id
+        self.log = logging.getLogger(f"TDS2024B Measure {self.id}")
+
+    # ┌────────────────────────────────────────┐
+    # │ Update config from dict                │
+    # └────────────────────────────────────────┘
+
+    def settings_load(self, data):
+        if data.get("source", None) is not None: self.source = TDS2024B_Measurement_Source (data["source"])
+        if data.get("type",   None) is not None: self.type   = TDS2024B_Measurement_Type   (data["type"]  )
+
 
     # ┌────────────────────────────────────────┐
     # │ Read/Write resource                    │
@@ -135,15 +144,15 @@ class TDS2024B_Measurement:
 # ┌────────────────────────────────────────┐
 # │ Channel parmaeters                     │
 # └────────────────────────────────────────┘
-class TDS2024B_Channel_Coupling(Enum):
+class TDS2024B_Channel_Coupling(str, Enum):
     AC  = "AC"
     DC  = "DC"
     GND = "GND"
 
 @dataclass
 class TDS2024B_Channel_Parameters:
-    dev:  usbtmc.Instrument                    # USBTMC handle
-    chan: int                                  # Channel number (0-3)
+    dev:  InitVar[usbtmc.Instrument]           # USBTMC handle
+    chan: InitVar[int]                         # Channel number (0-3): not represented in dict data
     
     bw_filter: bool                     = None # Enable bandwidth filter? (20MHz or 200MHz)
     coupling: TDS2024B_Channel_Coupling = None # Channel coupling mode
@@ -156,10 +165,27 @@ class TDS2024B_Channel_Parameters:
 
     on: bool                            = None # Channel is enabled?
 
-    log: logging.Logger = field(init=False)
+    def __post_init__(self, dev, chan):
+        self.dev  = dev
+        self.chan = chan
+        self.log  = logging.getLogger(f"TDS2024B Channel CH{self.chan}")
 
-    def __post_init__(self):
-        self.log = logging.getLogger(f"TDS2024B Channel CH{self.chan}")
+    # ┌────────────────────────────────────────┐
+    # │ Update config from dict                │
+    # └────────────────────────────────────────┘
+    
+    def settings_load(self, data):
+        if data.get("bw_filter"  , None) is not None: self.bw_filter   = bool(data["bw_filter"])
+        if data.get("coupling"   , None) is not None: self.coupling    = TDS2024B_Channel_Coupling(data["coupling"])
+        if data.get("invert"     , None) is not None: self.invert      = bool(data["invert"])
+        if data.get("position"   , None) is not None: self.position    = float(data["position"])
+        if data.get("attenuation", None) is not None: self.attenuation = int(data["attenuation"])
+        if data.get("scale"      , None) is not None: self.scale       = float(data["scale"])
+        if data.get("on"         , None) is not None: self.on          = bool(data["on"])
+
+    # ┌────────────────────────────────────────┐
+    # │ Read / Write resource                  │
+    # └────────────────────────────────────────┘
 
     def settings_read(self):
         self.log.debug("Read settings")
@@ -171,6 +197,7 @@ class TDS2024B_Channel_Parameters:
         self.attenuation = float(self.dev.ask(f"CH{self.chan}:PROBE?"))
         self.scale       = float(self.dev.ask(f"CH{self.chan}:SCALE?"))
 
+
     def settings_write(self):
         self.log.debug("Write settings")
 
@@ -181,7 +208,10 @@ class TDS2024B_Channel_Parameters:
         if self.attenuation is not None: self.dev.write(f"CH{self.chan}:PROBE {self.attenuation:E}")
         if self.scale       is not None: self.dev.write(f"CH{self.chan}:SCALE {self.scale:E}")
 
-    # ──────────── Enable/disable ──────────── #
+    # ┌────────────────────────────────────────┐
+    # │ Enable/Disable                         │
+    # └────────────────────────────────────────┘
+
     def enable(self):
         self.log.info("--> Enable channel")
         self.dev.write(f"SELECT:CH{self.chan} ON")
@@ -196,16 +226,29 @@ class TDS2024B_Channel_Parameters:
 
 @dataclass
 class TDS2024B_Horizontal_Parameters:
-    dev: usbtmc.Instrument
-    id: str             # Name of the horizontal scale
+    dev: InitVar[usbtmc.Instrument]
+    id:  InitVar[str]    # Name of the horizontal scale: not represented in dict data
 
     pos: float   = None # Horizontal position
     scale: float = None # s/div scale
 
-    log: logging.Logger = field(init=False)
-
-    def __post_init__(self):
+    def __post_init__(self, dev, id):
+        self.dev = dev
+        self.id  = id
         self.log = logging.getLogger(f"TDS2024B horizontal {self.id} scale")
+
+    # ┌────────────────────────────────────────┐
+    # │ Update from dict                       │
+    # └────────────────────────────────────────┘
+    
+    def settings_load(self, data):
+        if data.get("pos",   None) is not None: self.pos   = float(data["pos"])
+        if data.get("scale", None) is not None: self.scale = float(data["scale"])
+    
+
+    # ┌────────────────────────────────────────┐
+    # │ Settings read/write                    │
+    # └────────────────────────────────────────┘
 
     def settings_read(self):
         self.log.debug("Read settings")
@@ -223,16 +266,16 @@ class TDS2024B_Horizontal_Parameters:
 # │ Trigger parameters                     │
 # └────────────────────────────────────────┘
 
-class TDS2024B_Trigger_Type(Enum):
+class TDS2024B_Trigger_Type(str, Enum):
     Edge    = "EDGE"
     Video   = "VID"
     Pulse   = "PUL"
 
-class TDS2024B_Trigger_Mode(Enum):
+class TDS2024B_Trigger_Mode(str, Enum):
     Auto    = "AUTO"
     Normal  = "NORMAL"
 
-class TDS2024B_Trigger_State(Enum):
+class TDS2024B_Trigger_State(str, Enum):
     Armed   = "ARMED"
     Ready   = "READY"
     Trigger = "TRIGGER"
@@ -242,18 +285,18 @@ class TDS2024B_Trigger_State(Enum):
     
 # ────────── Edge trigger defs. ────────── #
 
-class TDS2024B_Trigger_Edge_Coupling(Enum):
+class TDS2024B_Trigger_Edge_Coupling(str, Enum):
     AC           = "AC"
     DC           = "DC"
     HF_Reject    = "HFREJ"
     LF_Reject    = "LFREJ"
     Noise_Reject = "NOISEREJ"
 
-class TDS2024B_Trigger_Edge_Slope(Enum):
+class TDS2024B_Trigger_Edge_Slope(str, Enum):
     Fall = "FALL"
     Rise = "RISE"
 
-class TDS2024B_Trigger_Edge_Source(Enum):
+class TDS2024B_Trigger_Edge_Source(str, Enum):
     CH1   = "CH1"
     CH2   = "CH2"
     CH3   = "CH3"
@@ -267,8 +310,8 @@ class TDS2024B_Trigger_Edge_Source(Enum):
 
 @dataclass
 class TDS2024B_Trigger_Parameters:
-    dev: usbtmc.Instrument
-    id : str
+    dev: InitVar[usbtmc.Instrument]
+    id : InitVar[str] # Name of trigger: not represented in dict data
 
     # ──────────── Global settings ─────────── #
 
@@ -295,10 +338,20 @@ class TDS2024B_Trigger_Parameters:
 
     # ───────────────── Misc. ──────────────── #
 
-    log: logging.Logger = field(init=False)
-
-    def __post_init__(self):
+    def __post_init__(self, dev, id):
+        self.dev = dev
+        self.id  = id
         self.log = logging.getLogger(f"TDS2024B Trigger {self.id}")
+
+    # ─────── Update config from dict. ─────── #
+
+    def settings_load(self, data):
+        if data.get("type"         , None) is not None: self.type          = TDS2024B_Trigger_Type(data["type"])
+        if data.get("mode"         , None) is not None: self.mode          = TDS2024B_Trigger_Mode(data["mode"])
+        if data.get("edge_coupling", None) is not None: self.edge_coupling = TDS2024B_Trigger_Edge_Coupling(data["edge_coupling"])
+        if data.get("edge_slope"   , None) is not None: self.edge_slope    = TDS2024B_Trigger_Edge_Slope(data["edge_slope"])
+        if data.get("edge_source"  , None) is not None: self.edge_source   = TDS2024B_Trigger_Edge_Source(data["edge_source"])
+    
 
     # ────────────── Properties ────────────── #
     def frequency(self):
@@ -306,6 +359,7 @@ class TDS2024B_Trigger_Parameters:
 
     def state(self):
         return TDS2024B_Trigger_State(self.dev.ask(f"TRIG:{self.id}:STATE"))
+
 
     # ────────── Settings read/write ───────── #
     def settings_read(self):
@@ -443,11 +497,11 @@ class TDS2024B_Interface:
         # except it is not displayed on the scope, and thus is
         # faster to run
         self.mes_imm = TDS2024B_Measurement(self.dev, "IMM")
+  
 
-
-    def state_sync(self):
+    def settings_read(self):
         # Init resources status
-        self.log.info("Synchronize resource status")
+        self.log.info("Read all settings")
 
         self.trigger.settings_read()
         self.horizontal_main.settings_read()
@@ -458,6 +512,20 @@ class TDS2024B_Interface:
         self.mes_imm.settings_read()
 
         self.synchronized.set()
+
+    def settings_write(self):
+        # Init resources status
+        self.log.info("Write all settings")
+        self.trigger.settings_write()
+        self.horizontal_main.settings_write()
+        self.horizontal_delay.settings_write()
+
+        for c   in self.ch:  c.settings_write()
+        for mes in self.mes: mes.settings_write()
+        self.mes_imm.settings_write()
+
+        self.synchronized.set()
+
 
     # ┌────────────────────────────────────────┐
     # │ System commands                        │
@@ -505,3 +573,61 @@ class TDS2024B_Interface:
         img.putpalette(img_palette.flatten().tolist(), rawmode="RGB")
 
         return img.convert("RGB") # Return the loaded BMP image
+
+
+    # ┌────────────────────────────────────────┐
+    # │ Config dump/load                       │
+    # └────────────────────────────────────────┘
+
+    def settings_dump(self):
+        """
+        Dumps the config in dict format
+        """
+
+        return {
+            "trigger"         : asdict(self.trigger),
+            "horizontal_main" : asdict(self.horizontal_main),
+            "horizontal_delay": asdict(self.horizontal_delay),
+            "ch1"             : asdict(self.ch[0]),
+            "ch2"             : asdict(self.ch[1]),
+            "ch3"             : asdict(self.ch[2]),
+            "ch4"             : asdict(self.ch[3]),
+            "mes1"            : asdict(self.mes[0]),
+            "mes2"            : asdict(self.mes[1]),
+            "mes3"            : asdict(self.mes[2]),
+            "mes4"            : asdict(self.mes[3]),
+            "mes_imm"         : asdict(self.mes_imm)
+        }
+
+    def settings_load(self, data):
+        """
+        Load config from dict data
+        """
+
+
+        if "trigger" in data:
+            self.log.info("Load trigger config")
+            self.trigger.settings_load(data["trigger"])
+
+        if "horizontal_main" in data:
+            self.log.info("Load main horizontal settings")
+            self.horizontal_main.settings_load(data["horizontal_main"])
+
+        if "horizontal_delay" in data:
+            self.log.info("Load delay horizontal settings")
+            self.horizontal_main.settings_load(data["horizontal_delay"])
+    
+        if "ch" in data:
+            for i in range(4):
+                if f"ch{i+1}" in data:
+                    self.log.info(f"Load channel settings for channel {i+1}")
+                    self.ch[i].settings_load(data[f"ch{i+1}"])
+
+            for i in range(4):
+                if f"mes{i+1}" in data:
+                    self.log.info(f"Load measure settings for measure {i+1}")
+                    self.mes[i].settings_load(data[f"mes{i+1}"])
+
+        if "mes_imm" in data:
+            self.log.info("Load immediate measure settings")
+            self.mes_imm.settings_load(data["mes_imm"])
