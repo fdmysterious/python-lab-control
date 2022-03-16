@@ -97,12 +97,12 @@ class TDS2024B_Measurement:
 
         # Read Source
         self.source = TDS2024B_Measurement_Source(
-            self.dev.ask(f"MEASU:{self.id}:SOURCE?").split(" ")[1]
+            self.dev.ask(f"MEASU:{self.id}:SOURCE?")
         )
 
         # Read Type
         self.type   = TDS2024B_Measurement_Type(
-            self.dev.ask(f"MEASU:{self.id}:TYPE?").split(" ")[1]
+            self.dev.ask(f"MEASU:{self.id}:TYPE?")
         )
     
 
@@ -122,7 +122,7 @@ class TDS2024B_Measurement:
     @property
     def unit(self):
         return TDS2024B_Measurement_Unit(
-            self.dev.ask(f"MEASU:{self.id}:UNIT?").split(" ")[1].replace("\"","") # Remove quotes
+            self.dev.ask(f"MEASU:{self.id}:UNIT?").replace("\"","") # Remove quotes
         )
 
     # ┌────────────────────────────────────────┐
@@ -130,7 +130,7 @@ class TDS2024B_Measurement:
     # └────────────────────────────────────────┘
 
     def value(self):
-        return float(self.dev.ask(f"MEASU:{self.id}:VALUE?").split(" ")[1])
+        return float(self.dev.ask(f"MEASU:{self.id}:VALUE?"))
 
 # ┌────────────────────────────────────────┐
 # │ Channel parmaeters                     │
@@ -164,12 +164,12 @@ class TDS2024B_Channel_Parameters:
     def settings_read(self):
         self.log.debug("Read settings")
 
-        self.bw_filter   = True if self.dev.ask(f"CH{self.chan}:BANDWIDTH?").split(" ")[1] == "ON" else False
-        self.coupling    = TDS2024B_Channel_Coupling( self.dev.ask(f"CH{self.chan}:COUPLING?").split(" ")[1] )
-        self.invert      = True if self.dev.ask(f"CH{self.chan}:INVERT?").split(" ")[1] == "ON" else False
-        self.position    = float(self.dev.ask(f"CH{self.chan}:POS?").split(" ")[1])
-        self.attenuation = float(self.dev.ask(f"CH{self.chan}:PROBE?").split(" ")[1])
-        self.scale       = float(self.dev.ask(f"CH{self.chan}:SCALE?").split(" ")[1])
+        self.bw_filter   = True if self.dev.ask(f"CH{self.chan}:BANDWIDTH?") == "ON" else False
+        self.coupling    = TDS2024B_Channel_Coupling( self.dev.ask(f"CH{self.chan}:COUPLING?") )
+        self.invert      = True if self.dev.ask(f"CH{self.chan}:INVERT?") == "ON" else False
+        self.position    = float(self.dev.ask(f"CH{self.chan}:POS?"))
+        self.attenuation = float(self.dev.ask(f"CH{self.chan}:PROBE?"))
+        self.scale       = float(self.dev.ask(f"CH{self.chan}:SCALE?"))
 
     def settings_write(self):
         self.log.debug("Write settings")
@@ -210,8 +210,8 @@ class TDS2024B_Horizontal_Parameters:
     def settings_read(self):
         self.log.debug("Read settings")
 
-        self.pos   = float( self.dev.ask(f"HOR:{self.id}:POS?").split(" ")[1]   )
-        self.scale = float( self.dev.ask(f"HOR:{self.id}:SCALE?").split(" ")[1] )
+        self.pos   = float(self.dev.ask(f"HOR:{self.id}:POS?"))
+        self.scale = float(self.dev.ask(f"HOR:{self.id}:SCALE?"))
 
     def settings_write(self):
         self.log.debug("Write settings")
@@ -302,7 +302,7 @@ class TDS2024B_Trigger_Parameters:
 
     # ────────────── Properties ────────────── #
     def frequency(self):
-        return float( self.dev.ask(f"TRIG:{self.id}:FREQ?").split(" ")[1] )
+        return float( self.dev.ask(f"TRIG:{self.id}:FREQ?"))
 
     def state(self):
         return TDS2024B_Trigger_State(self.dev.ask(f"TRIG:{self.id}:STATE"))
@@ -312,14 +312,14 @@ class TDS2024B_Trigger_Parameters:
         self.log.debug("Read settings")
 
         # Main settings
-        self.type          = TDS2024B_Trigger_Type(self.dev.ask(f"TRIG:{self.id}:TYPE?").split(" ")[1])
-        self.mode          = TDS2024B_Trigger_Mode(self.dev.ask(f"TRIG:{self.id}:MODE?").split(" ")[1])
-        self.level         = float(self.dev.ask(f"TRIG:{self.id}:LEVEL?").split(" ")[1])
+        self.type          = TDS2024B_Trigger_Type(self.dev.ask(f"TRIG:{self.id}:TYPE?"))
+        self.mode          = TDS2024B_Trigger_Mode(self.dev.ask(f"TRIG:{self.id}:MODE?"))
+        self.level         = float(self.dev.ask(f"TRIG:{self.id}:LEVEL?"))
 
         # Edge settings
-        self.edge_coupling = TDS2024B_Trigger_Edge_Coupling(self.dev.ask(f"TRIG:{self.id}:EDGE:COUPLING?").split(" ")[1])
-        self.edge_slope    = TDS2024B_Trigger_Edge_Slope   (self.dev.ask(f"TRIG:{self.id}:EDGE:SLOPE?").split(" ")[1])
-        self.edge_source   = TDS2024B_Trigger_Edge_Source  (self.dev.ask(f"TRIG:{self.id}:EDGE:SOURCE?").split(" ")[1])
+        self.edge_coupling = TDS2024B_Trigger_Edge_Coupling(self.dev.ask(f"TRIG:{self.id}:EDGE:COUPLING?"))
+        self.edge_slope    = TDS2024B_Trigger_Edge_Slope   (self.dev.ask(f"TRIG:{self.id}:EDGE:SLOPE?"))
+        self.edge_source   = TDS2024B_Trigger_Edge_Source  (self.dev.ask(f"TRIG:{self.id}:EDGE:SOURCE?"))
 
     def settings_write(self):
         self.log.debug("Write settings")
@@ -421,8 +421,10 @@ class TDS2024B_Interface:
 
         # Change the default timeout
         self.dev.timeout = 10 
-
         self.log = logging.getLogger("TDS2024B Interface")
+
+        # Disable headers for query responses
+        self.dev.write("HEADER OFF")
 
         # Trigger settings
         self.trigger          = TDS2024B_Trigger_Parameters(self.dev, "MAIN")
@@ -441,6 +443,7 @@ class TDS2024B_Interface:
         # except it is not displayed on the scope, and thus is
         # faster to run
         self.mes_imm = TDS2024B_Measurement(self.dev, "IMM")
+
 
     def state_sync(self):
         # Init resources status
