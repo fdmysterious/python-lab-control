@@ -92,6 +92,46 @@ pip3 install -r requirements.txt
 Example usage for the TDS2024B interface
 ----------------------------------------
 
+Here are some examples for the oscilloscope interface.
+
+### Read and save config from oscilloscope
+
+```python
+from instr.tds2024b import (
+	TDS2024B_Interface
+)
+
+import json
+
+if __name__ == "__main__":
+	osc = TDS2024B_Interface()
+
+	osc.settings_read()        # Read config with SCPI commands from oscilloscope
+	conf = osc.settings_dump() # Dump settings in dictionnary
+
+	with open("osc_config.json", "w") as fhandle:
+		json.dump(conf, fhandle)
+```
+
+### Load config from json file
+
+```python
+from instr.tds2024b import (
+	TDS2024B_Interface
+)
+
+if __name__ == "__main__":
+	osc = TDS2024B_Interface()
+
+	with open("osc_config.json", "w") as fhandle:
+		conf = json.load(fhandle)
+
+	osc.settings_load(conf) # Load config from loaded dictionnary
+	osc.settings_write()    # Send loaded config to scope
+```
+
+### Manual config write
+
 ```python
 
 from instr.tds2024b import (
