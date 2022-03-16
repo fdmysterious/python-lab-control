@@ -501,4 +501,4 @@ class TDS2024B_Interface:
         self.log.info(len(img_palette.flatten()))
         img.putpalette(img_palette.flatten().tolist(), rawmode="RGB")
 
-        return img # Return the loaded BMP image
+        return img.convert("RGB") # Return the loaded BMP image
