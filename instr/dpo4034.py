@@ -70,11 +70,6 @@ class DPO4034_Measurement_Source(str, Enum):
         }
 
         return __chan_idx[i]
-{||||||||
-|||||||||
-||||||
-||||||||
-|SIGMA1|SIGMA2|SIGMA3|STDdev|WAVEFORMS}
 
 class DPO4034_Measurement_Type(str, Enum):
     # TODO # Check returned names by oscilloscope
