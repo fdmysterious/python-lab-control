@@ -15,6 +15,13 @@ import re
 
 import functools
 
+from enum import IntEnum
+
+class QL335P_Range(IntEnum):
+    RANGE_15V_5A    = 0,
+    RANGE_35V_3A    = 1,
+    RANGE_35V_500mA = 2
+
 class QL335P_Interface:
     __RE_VOLTAGE = re.compile(r"([0-9]+\.[0-9]+)V")
     __RE_CURRENT = re.compile(r"([0-9]+\.[0-9]+)A")
@@ -95,6 +102,21 @@ class QL335P_Interface:
         self.log.debug(f"Set current to {current}, verify = {verify}")
         self.__write(f"I1 {current:.3f}")
         if verify: assert self.current_get() == current
+
+    # ┌────────────────────────────────────────┐
+    # │ Voltage/Current range                  │
+    # └────────────────────────────────────────┘
+    def range_get(self):
+        self.__write("RANGE1?")
+        resp = self.__read()[1] # Response is 0, 1 or 2
+        i_resp = int(resp.strip())
+        return QL335P_Range(i_resp)
+
+    def range_set(self, r: QL335P_Range, verify: bool = True):
+        self.log.debug(f"Set output range to: {r.name}")
+        self.__write(f"RANGE1 {r.value}")
+        if verify: assert self.range_get() == r
+
 
     # ┌────────────────────────────────────────┐
     # │ Output control and status              │
