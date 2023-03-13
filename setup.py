@@ -3,7 +3,7 @@ from setuptools.command.install import install
 
 # Setting up
 setup(
-        name="python-lab-control", 
+        name="python_lab_control", 
         version='0.0.1',
         author="Florian Dupeyron",
         description='Convenient class to control lab tools such as oscilloscope',
