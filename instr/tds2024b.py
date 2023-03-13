@@ -498,7 +498,7 @@ class TDS2024B_Interface:
         self.ch      = [TDS2024B_Channel_Parameters(self.dev, i) for i in range(1,5)]
 
         # Measurements handles
-        self.mes     = [TDS2024B_Measurement(self.dev, f"MEAS{i}") for i in range(1,6)]
+        self.mes     = [TDS2024B_Measurement(self.dev, f"MEAS{i}") for i in range(1,5)]
 
         # Immediate measure is the same as classic measures,
         # except it is not displayed on the scope, and thus is
