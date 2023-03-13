@@ -44,6 +44,25 @@ $ pip install -r requirements.txt
 (.env) $ python3 osccap.py test_image.png
 ```
 
+### Python package
+
+To facilitate access to interface and script it is possible to install python lab control as a package name: *python_lab_control*
+
+package installation:
+```bash
+$ pip install git+https://github.com/Helfezer/python-lab-control.git@package_python
+```
+
+Accessing interface in python:
+```python
+from python_lab_control.instr.tds2024b import TDS2024B_Interface
+```
+
+Using script from package:
+```bash
+python3 -m python_lab_control.script.osccap img.png
+```
+
 Making this work on windows
 ---------------------------
 
