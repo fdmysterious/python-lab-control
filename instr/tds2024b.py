@@ -624,16 +624,14 @@ class TDS2024B_Interface:
             self.log.info("Load delay horizontal settings")
             self.horizontal_main.settings_load(data["horizontal_delay"])
     
-        if "ch" in data:
-            for i in range(4):
-                if f"ch{i+1}" in data:
-                    self.log.info(f"Load channel settings for channel {i+1}")
-                    self.ch[i].settings_load(data[f"ch{i+1}"])
+        for i in range(4):
+            if f"ch{i+1}" in data:
+                self.log.info(f"Load channel settings for channel {i+1}")
+                self.ch[i].settings_load(data[f"ch{i+1}"])
 
-            for i in range(4):
-                if f"mes{i+1}" in data:
-                    self.log.info(f"Load measure settings for measure {i+1}")
-                    self.mes[i].settings_load(data[f"mes{i+1}"])
+            if f"mes{i+1}" in data:
+                self.log.info(f"Load measure settings for measure {i+1}")
+                self.mes[i].settings_load(data[f"mes{i+1}"])
 
         if "mes_imm" in data:
             self.log.info("Load immediate measure settings")
