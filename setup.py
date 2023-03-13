@@ -9,7 +9,7 @@ setup(
         description='Convenient class to control lab tools such as oscilloscope',
         readme = "README.md",
         packages=find_packages(where='src'),
-        package_dir = {"": "src", "instr": "src/instr"},
+        package_dir = {"": "src", "instr": "src/instr", "script": "src/script"},
         install_requires=['imap-tools ==0.41.0',
                           'importlib-metadata ==4.10.1',
                           'importlib-resources ==5.4.0',
