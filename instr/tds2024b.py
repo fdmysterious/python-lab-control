@@ -55,20 +55,25 @@ class TDS2024B_Measurement_Source(str, Enum):
 
 class TDS2024B_Measurement_Type(str, Enum):
     Disable   = "NONE"
-    Cycle_RMS = "CRMS"
+    Cycle_RMS = "CRMS"   # efficace
 
     Fall      = "FALL"   # Fall time between 90% and 10% of the first falling edge of the waveform
     Rise      = "RISE"   # Rise time between 10% and 90% of the first rising  edge of the waveform
 
-    Maximum   = "MAXI"
-    Minimum   = "MINI"
+    Maxi      = "MAXI"
+    Mini      = "MINI"
+    # Duplicate in case of different firmware version
+    Maximum   = "MAXIMUM"
+    Minimum   = "MINIMUM"
 
     Period    = "PERIOD" # Signal period
+    Frequency = "FREQUENCY"
+    Mean      = "MEAN"
 
     NWidth    = "NWIDTH" # Negative pulse width
     PWidth    = "PWIDTH" # Positive pulse width
 
-    Peak2Peak = "PK2PK"
+    Peak2Peak = "PK2PK"  # C-C
 
 class TDS2024B_Measurement_Unit(str, Enum):
     Volts     = "V"
