@@ -6,7 +6,7 @@ Python lab control
 :Date: Mars 2023
 """
 
-from instr import tds2024b
-from instr import afg3000
-from instr import dpo4034
-from instr import ql335p
+from instr.tds2024b import TDS2024B_Interface
+from instr.afg3000  import AFG3000_Interface
+from instr.dpo4034  import DPO4034_Interface
+from instr.ql335p   import QL335P_Interface
