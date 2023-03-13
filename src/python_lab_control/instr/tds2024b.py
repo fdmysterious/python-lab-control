@@ -355,7 +355,7 @@ class TDS2024B_Trigger_Parameters:
     def settings_load(self, data):
         if data.get("type"         , None) is not None: self.type          = TDS2024B_Trigger_Type(data["type"])
         if data.get("mode"         , None) is not None: self.mode          = TDS2024B_Trigger_Mode(data["mode"])
-        if data.get("level"        , None) is not None: self.level         = int(data["level"])
+        if data.get("level"        , None) is not None: self.level         = float(data["level"])
         if data.get("edge_coupling", None) is not None: self.edge_coupling = TDS2024B_Trigger_Edge_Coupling(data["edge_coupling"])
         if data.get("edge_slope"   , None) is not None: self.edge_slope    = TDS2024B_Trigger_Edge_Slope(data["edge_slope"])
         if data.get("edge_source"  , None) is not None: self.edge_source   = TDS2024B_Trigger_Edge_Source(data["edge_source"])
