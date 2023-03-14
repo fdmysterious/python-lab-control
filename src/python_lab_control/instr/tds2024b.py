@@ -623,7 +623,7 @@ class TDS2024B_Interface:
 
         if "horizontal_delay" in data:
             self.log.info("Load delay horizontal settings")
-            self.horizontal_main.settings_load(data["horizontal_delay"])
+            self.horizontal_delay.settings_load(data["horizontal_delay"])
     
         for i in range(4):
             if f"ch{i+1}" in data:
