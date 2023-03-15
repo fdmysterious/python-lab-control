@@ -135,9 +135,7 @@ class TDS2024B_Measurement:
     
     @property
     def unit(self):
-        return TDS2024B_Measurement_Unit(
-            self.dev.ask(f"MEASU:{self.id}:UNIT?").replace("\"","") # Remove quotes
-        )
+        return self.dev.ask(f"MEASU:{self.id}:UNIT?").replace("\"","") # Remove quotes
 
     # ┌────────────────────────────────────────┐
     # │ Value read                             │
