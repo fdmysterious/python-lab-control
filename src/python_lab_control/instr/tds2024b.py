@@ -55,20 +55,25 @@ class TDS2024B_Measurement_Source(str, Enum):
 
 class TDS2024B_Measurement_Type(str, Enum):
     Disable   = "NONE"
-    Cycle_RMS = "CRMS"
+    Cycle_RMS = "CRMS"   # efficace
 
     Fall      = "FALL"   # Fall time between 90% and 10% of the first falling edge of the waveform
     Rise      = "RISE"   # Rise time between 10% and 90% of the first rising  edge of the waveform
 
-    Maximum   = "MAXI"
-    Minimum   = "MINI"
+    Maxi      = "MAXI"
+    Mini      = "MINI"
+    # Duplicate in case of different firmware version
+    Maximum   = "MAXIMUM"
+    Minimum   = "MINIMUM"
 
     Period    = "PERIOD" # Signal period
+    Frequency = "FREQUENCY"
+    Mean      = "MEAN"
 
     NWidth    = "NWIDTH" # Negative pulse width
     PWidth    = "PWIDTH" # Positive pulse width
 
-    Peak2Peak = "PK2PK"
+    Peak2Peak = "PK2PK"  # C-C
 
 class TDS2024B_Measurement_Unit(str, Enum):
     Volts     = "V"
@@ -130,9 +135,7 @@ class TDS2024B_Measurement:
     
     @property
     def unit(self):
-        return TDS2024B_Measurement_Unit(
-            self.dev.ask(f"MEASU:{self.id}:UNIT?").replace("\"","") # Remove quotes
-        )
+        return self.dev.ask(f"MEASU:{self.id}:UNIT?").replace("\"","") # Remove quotes
 
     # ┌────────────────────────────────────────┐
     # │ Value read                             │
@@ -350,6 +353,7 @@ class TDS2024B_Trigger_Parameters:
     def settings_load(self, data):
         if data.get("type"         , None) is not None: self.type          = TDS2024B_Trigger_Type(data["type"])
         if data.get("mode"         , None) is not None: self.mode          = TDS2024B_Trigger_Mode(data["mode"])
+        if data.get("level"        , None) is not None: self.level         = float(data["level"])
         if data.get("edge_coupling", None) is not None: self.edge_coupling = TDS2024B_Trigger_Edge_Coupling(data["edge_coupling"])
         if data.get("edge_slope"   , None) is not None: self.edge_slope    = TDS2024B_Trigger_Edge_Slope(data["edge_slope"])
         if data.get("edge_source"  , None) is not None: self.edge_source   = TDS2024B_Trigger_Edge_Source(data["edge_source"])
@@ -493,7 +497,7 @@ class TDS2024B_Interface:
         self.ch      = [TDS2024B_Channel_Parameters(self.dev, i) for i in range(1,5)]
 
         # Measurements handles
-        self.mes     = [TDS2024B_Measurement(self.dev, f"MEAS{i}") for i in range(1,6)]
+        self.mes     = [TDS2024B_Measurement(self.dev, f"MEAS{i}") for i in range(1,5)]
 
         # Immediate measure is the same as classic measures,
         # except it is not displayed on the scope, and thus is
@@ -617,18 +621,16 @@ class TDS2024B_Interface:
 
         if "horizontal_delay" in data:
             self.log.info("Load delay horizontal settings")
-            self.horizontal_main.settings_load(data["horizontal_delay"])
+            self.horizontal_delay.settings_load(data["horizontal_delay"])
     
-        if "ch" in data:
-            for i in range(4):
-                if f"ch{i+1}" in data:
-                    self.log.info(f"Load channel settings for channel {i+1}")
-                    self.ch[i].settings_load(data[f"ch{i+1}"])
+        for i in range(4):
+            if f"ch{i+1}" in data:
+                self.log.info(f"Load channel settings for channel {i+1}")
+                self.ch[i].settings_load(data[f"ch{i+1}"])
 
-            for i in range(4):
-                if f"mes{i+1}" in data:
-                    self.log.info(f"Load measure settings for measure {i+1}")
-                    self.mes[i].settings_load(data[f"mes{i+1}"])
+            if f"mes{i+1}" in data:
+                self.log.info(f"Load measure settings for measure {i+1}")
+                self.mes[i].settings_load(data[f"mes{i+1}"])
 
         if "mes_imm" in data:
             self.log.info("Load immediate measure settings")

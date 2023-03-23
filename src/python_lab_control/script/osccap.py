@@ -25,7 +25,7 @@ if sys.platform == "win32":
     #os.environ["PATH"] = str((Path(libusb._platform.DLL_PATH) / "..").resolve()) + os.pathsep + os.environ["PATH"]
 
 from pathlib import Path
-from instr.tds2024b import TDS2024B_Interface
+from ..instr.tds2024b import TDS2024B_Interface
 
 def dir_file(path):
     p = Path(path)
